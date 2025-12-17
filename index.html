@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reaction Lab - Student Activity</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Roboto+Mono:wght@500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background-color: #f8fafc; /* Slate-50 - Light Background */
+            color: #1e293b; /* Slate-800 - Dark Text */
+            overflow: hidden; 
+            touch-action: none;
+        }
+
+        .equation-font {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .report-font {
+            font-family: 'Courier Prime', monospace;
+        }
+
+        /* Card Styles */
+        .reaction-card {
+            background: white;
+            color: #1e293b;
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            transform-style: preserve-3d;
+            touch-action: none;
+            user-select: none;
+            transition: transform 0.1s;
+            cursor: grab;
+        }
+
+        .reaction-card:active {
+            cursor: grabbing;
+            transform: scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+
+        .reaction-card.returning {
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Flask/Zone Styles */
+        .flask-zone {
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .flask-zone.hovered {
+            transform: scale(1.02) translateX(-5px);
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+        
+        .flask-zone.hovered path {
+            filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.2));
+        }
+
+        /* Animations */
+        @keyframes bubble {
+            0% { transform: translateY(0) scale(1); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(-40px) scale(1.5); opacity: 0; }
+        }
+
+        .bubble {
+            position: absolute;
+            background: #3b82f6; /* Blue bubbles for visibility on white */
+            border-radius: 50%;
+            pointer-events: none;
+            animation: bubble 1.2s ease-out forwards;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+            border-color: #ef4444 !important;
+            background-color: #fef2f2 !important;
+        }
+        
+        .correct-pulse {
+            animation: pulse-green 0.5s ease-in-out;
+        }
+
+        @keyframes pulse-green {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* UI Elements */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Print Styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #victory-screen, #victory-screen * {
+                visibility: visible;
+            }
+            #victory-screen {
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background: white;
+                color: black;
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .report-card {
+                box-shadow: none !important;
+                border: 2px solid #000 !important;
+                transform: none !important;
+            }
+        }
+
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col p-4 relative overflow-hidden">
+
+    <!-- Background Elements (Light Mode) -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-5">
+        <i class="fas fa-atom absolute top-10 left-10 text-9xl text-slate-800 animate-spin-slow" style="animation-duration: 30s;"></i>
+        <i class="fas fa-dna absolute bottom-20 left-20 text-8xl text-slate-800 transform rotate-45"></i>
+        <i class="fas fa-flask absolute top-1/2 right-40 text-8xl text-slate-800 opacity-50"></i>
+    </div>
+
+    <!-- START SCREEN -->
+    <div id="start-screen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md">
+        <div class="glass-panel p-8 rounded-2xl max-w-md w-full shadow-2xl mx-4 border border-slate-200">
+            <div class="text-center mb-8">
+                <i class="fas fa-flask text-6xl text-blue-600 mb-6 animate-bounce"></i>
+                <h1 class="text-4xl font-bold text-slate-800 mb-2 tracking-wide">Reaction Lab</h1>
+                <p class="text-slate-500 text-sm uppercase tracking-widest">Identification Protocol</p>
+            </div>
+            
+            <div class="space-y-5">
+                <div>
+                    <label class="block text-slate-600 text-xs uppercase font-bold mb-2 ml-1 tracking-wider" for="student-name">Student Name</label>
+                    <input class="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-300 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition" 
+                           id="student-name" type="text" placeholder="Enter your full name">
+                </div>
+                <div>
+                    <label class="block text-slate-600 text-xs uppercase font-bold mb-2 ml-1 tracking-wider" for="class-period">Class Period</label>
+                    <select class="w-full px-4 py-3 rounded-lg bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition cursor-pointer" id="class-period">
+                        <option value="" disabled selected>Select your period</option>
+                        <option value="1">Period 1</option>
+                        <option value="2">Period 2</option>
+                        <option value="3">Period 3</option>
+                        <option value="4">Period 4</option>
+                        <option value="5">Period 5</option>
+                        <option value="6">Period 6</option>
+                        <option value="7">Period 7</option>
+                        <option value="8">Period 8</option>
+                    </select>
+                </div>
+                <button onclick="validateAndStart()" class="w-full mt-6 px-8 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg font-bold text-lg text-white shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-1 transition active:scale-95">
+                    Enter Lab <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+                <p id="login-error" class="text-red-500 text-center text-sm hidden mt-4 animate-pulse"><i class="fas fa-exclamation-circle"></i> Please fill in all fields.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header / Stats -->
+    <div class="z-10 w-full flex-none flex justify-between items-center glass-panel rounded-xl px-6 py-3 mb-4 shadow-sm bg-white">
+        <div>
+            <h1 class="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">
+                <i class="fas fa-microscope text-blue-600 mr-2"></i>Reaction Lab
+            </h1>
+            <p class="text-xs text-slate-500 font-mono mt-1" id="header-student-info">Student: <span class="text-slate-900 font-bold">Waiting...</span></p>
+        </div>
+        <div class="flex gap-8 text-center">
+            <div class="bg-slate-50 px-4 py-1 rounded-lg border border-slate-200">
+                <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Score</div>
+                <div class="text-2xl font-bold text-blue-600 font-mono" id="score">0</div>
+            </div>
+            <div class="bg-slate-50 px-4 py-1 rounded-lg border border-slate-200">
+                <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Streak</div>
+                <div class="text-2xl font-bold text-orange-500 font-mono" id="streak">0</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area: Split View -->
+    <div class="flex flex-col md:flex-row flex-grow w-full relative gap-6 overflow-hidden" id="game-area">
+
+        <!-- LEFT SIDE: Equation Card Area -->
+        <div class="w-full md:w-2/3 h-full relative flex items-center justify-center bg-slate-100/50 rounded-2xl border-2 border-dashed border-slate-200 p-4">
+             
+             <!-- Feedback Message -->
+            <div id="feedback" class="absolute top-10 pointer-events-none text-4xl md:text-5xl font-bold opacity-0 transition-opacity duration-300 drop-shadow-sm z-30"></div>
+
+            <!-- The Draggable Card -->
+            <div id="card-container" class="absolute z-20 w-[90%] max-w-lg h-32 md:h-44 cursor-grab opacity-0 transition-opacity duration-500 shadow-xl">
+                <div id="current-card" class="reaction-card w-full h-full rounded-2xl flex flex-col items-center justify-center p-4 md:p-6 border border-slate-200 text-center relative overflow-hidden bg-white transition-opacity duration-200">
+                    <div class="absolute top-2 right-4 text-[10px] text-slate-400 font-bold tracking-[0.2em] uppercase">Equation #<span id="q-num" class="text-blue-600">1</span></div>
+                    
+                    <!-- Main Equation Text Area -->
+                    <div class="w-full flex items-center justify-center flex-grow">
+                        <div class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold equation-font text-slate-800 whitespace-nowrap px-2" id="equation-text">
+                            <!-- Equation inserted here -->
+                        </div>
+                    </div>
+                    
+                    <div class="absolute bottom-0 left-0 w-full h-2 bg-slate-100">
+                        <div id="timer-bar" class="h-full bg-gradient-to-r from-blue-500 to-cyan-400 w-full transition-all duration-1000 ease-linear"></div>
+                    </div>
+                    
+                    <div class="absolute bottom-1 left-0 w-full text-center">
+                        <p class="text-[8px] md:text-[10px] text-slate-400 uppercase tracking-widest">Drag to the correct reaction type &rarr;</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDE: Drop Zones Vertical List -->
+        <div class="w-full md:w-1/3 h-full flex flex-col justify-center gap-2 overflow-y-auto pr-2" id="drop-zones">
+            
+            <!-- Synthesis -->
+            <div class="flask-zone flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200 cursor-pointer group hover:shadow-md" data-type="synthesis">
+                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                    <svg viewBox="0 0 24 24" class="w-6 h-6 text-blue-500 fill-current">
+                        <path d="M6,22a3,3,0,0,0,3-3V7a1,1,0,0,0-2,0V19a1,1,0,0,1-2,0V7A3,3,0,0,1,8,4h8a3,3,0,0,1,3,3V19a1,1,0,0,1-2,0V7a1,1,0,0,0-2,0V19a3,3,0,0,0,3,3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M8 22h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <rect x="7" y="14" width="10" height="6" rx="1" class="fill-blue-500 opacity-60" />
+                    </svg>
+                </div>
+                <div class="flex-grow">
+                    <div class="text-sm font-bold text-slate-700 uppercase tracking-wider group-hover:text-blue-700">Synthesis</div>
+                    <div class="text-[10px] text-slate-400 font-mono">A + B &rarr; AB</div>
+                </div>
+                <div class="text-slate-300 group-hover:text-blue-500"><i class="fas fa-chevron-left"></i></div>
+            </div>
+
+            <!-- Decomposition -->
+            <div class="flask-zone flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200 cursor-pointer group hover:shadow-md" data-type="decomposition">
+                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors">
+                    <svg viewBox="0 0 24 24" class="w-6 h-6 text-green-500 fill-current">
+                         <path d="M10,2v7.31L6,14v6a2,2,0,0,0,2,2h8a2,2,0,0,0,2-2V14l-4-4.69V2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                         <path d="M10 16h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                         <path d="M7 16h10v4H7z" class="fill-green-500 opacity-60" />
+                    </svg>
+                </div>
+                <div class="flex-grow">
+                    <div class="text-sm font-bold text-slate-700 uppercase tracking-wider group-hover:text-green-700">Decomposition</div>
+                    <div class="text-[10px] text-slate-400 font-mono">AB &rarr; A + B</div>
+                </div>
+                <div class="text-slate-300 group-hover:text-green-500"><i class="fas fa-chevron-left"></i></div>
+            </div>
+
+            <!-- Single Displacement -->
+            <div class="flask-zone flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200 cursor-pointer group hover:shadow-md" data-type="single">
+                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-yellow-50 rounded-lg group-hover:bg-yellow-100 transition-colors">
+                    <svg viewBox="0 0 24 24" class="w-6 h-6 text-yellow-500 fill-current">
+                        <path d="M8,21h8a2,2,0,0,0,2-2V12L12,3,6,12v7A2,2,0,0,0,8,21Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M8 15h8v4H8z" class="fill-yellow-500 opacity-60" />
+                    </svg>
+                </div>
+                <div class="flex-grow">
+                    <div class="text-sm font-bold text-slate-700 uppercase tracking-wider group-hover:text-yellow-700">Single Displacement</div>
+                    <div class="text-[10px] text-slate-400 font-mono">A + BC &rarr; AC + B</div>
+                </div>
+                <div class="text-slate-300 group-hover:text-yellow-500"><i class="fas fa-chevron-left"></i></div>
+            </div>
+
+            <!-- Double Displacement -->
+            <div class="flask-zone flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200 cursor-pointer group hover:shadow-md" data-type="double">
+                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
+                    <svg viewBox="0 0 24 24" class="w-6 h-6 text-purple-500 fill-current">
+                        <path d="M5,21a2,2,0,0,0,2-2V10l3-6h4l3,6V19a2,2,0,0,0,2,2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <rect x="7" y="14" width="10" height="5" class="fill-purple-500 opacity-60" />
+                    </svg>
+                </div>
+                <div class="flex-grow">
+                    <div class="text-sm font-bold text-slate-700 uppercase tracking-wider group-hover:text-purple-700">Double Displacement</div>
+                    <div class="text-[10px] text-slate-400 font-mono">AB + CD &rarr; AD + CB</div>
+                </div>
+                <div class="text-slate-300 group-hover:text-purple-500"><i class="fas fa-chevron-left"></i></div>
+            </div>
+
+            <!-- Combustion -->
+            <div class="flask-zone flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200 cursor-pointer group hover:shadow-md" data-type="combustion">
+                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-red-50 rounded-lg group-hover:bg-red-100 transition-colors">
+                    <svg viewBox="0 0 24 24" class="w-6 h-6 text-red-500 fill-current">
+                        <path d="M12,2a7,7,0,0,1,7,7c0,5-7,13-7,13S5,14,5,9A7,7,0,0,1,12,2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M9 11c0 3 3 7 3 7s3-4 3-7" class="fill-red-500 opacity-60" />
+                        <path d="M12 5v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="flex-grow">
+                    <div class="text-sm font-bold text-slate-700 uppercase tracking-wider group-hover:text-red-700">Combustion</div>
+                    <div class="text-[10px] text-slate-400 font-mono">CxHy + O₂ &rarr; CO₂ + H₂O</div>
+                </div>
+                <div class="text-slate-300 group-hover:text-red-500"><i class="fas fa-chevron-left"></i></div>
+            </div>
+
+        </div>
+
+        <!-- Victory Screen / Report (Overlaid) -->
+        <div id="victory-screen" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md rounded-xl overflow-y-auto">
+            
+            <!-- Report Card Styling -->
+            <div class="report-card bg-white text-slate-900 p-8 rounded-lg max-w-md w-full shadow-2xl transform rotate-1 border-4 border-slate-800 m-4">
+                <div class="border-b-4 border-double border-slate-800 pb-4 mb-6 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-2xl font-bold font-serif uppercase tracking-widest text-slate-900">Lab Report</h3>
+                        <div class="text-xs text-slate-500 uppercase">Chemistry Department</div>
+                    </div>
+                    <i class="fas fa-flask text-slate-800 text-3xl"></i>
+                </div>
+                
+                <div class="space-y-4 report-font text-sm md:text-base">
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-slate-500 font-bold">Student Name:</span>
+                        <span class="font-bold border-b-2 border-slate-800 pl-4 pr-2 flex-grow text-right text-blue-900" id="report-name">--</span>
+                    </div>
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-slate-500 font-bold">Class Period:</span>
+                        <span class="font-bold border-b-2 border-slate-800 pl-4 pr-2 min-w-[60px] text-right text-blue-900" id="report-period">--</span>
+                    </div>
+                    <div class="flex justify-between items-baseline">
+                        <span class="text-slate-500 font-bold">Date:</span>
+                        <span class="font-bold border-b-2 border-slate-800 pl-4 pr-2 min-w-[120px] text-right text-slate-700" id="report-date">--</span>
+                    </div>
+                    
+                    <div class="py-4 mt-2">
+                        <div class="flex justify-between items-center bg-slate-100 p-3 rounded border border-slate-300">
+                            <span class="text-slate-600 font-bold uppercase">Final Score</span>
+                            <div class="text-right">
+                                <span class="font-bold text-2xl text-blue-700 font-mono" id="report-score">0</span>
+                                <span class="text-slate-500 font-bold text-lg"> / <span id="report-max-score">--</span></span>
+                                <div class="text-xs text-slate-400">Total Possible Points</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 pt-6 border-t-2 border-dashed border-slate-400">
+                    <div class="text-xs text-slate-400 mb-8 italic text-center">-- For Instructor Use Only --</div>
+                    <div class="flex justify-between items-end mb-2">
+                        <span class="font-bold text-lg font-serif">Verified Grade:</span>
+                        <div class="border-b-2 border-slate-900 w-24"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons (No Print) -->
+            <div class="mt-6 flex flex-wrap justify-center gap-4 no-print pb-8">
+                <button onclick="window.print()" class="px-6 py-3 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition flex items-center gap-2 shadow-lg border border-slate-600">
+                    <i class="fas fa-print"></i> Print Report
+                </button>
+                <button onclick="location.reload()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition shadow-lg border border-blue-500">
+                    <i class="fas fa-user-plus"></i> New Student
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- Data ---
+        const reactionData = [
+            { id: 1, eq: "2 Mg + O₂ → 2 MgO", type: "synthesis" },
+            { id: 2, eq: "2 HgO → 2 Hg + O₂", type: "decomposition" },
+            { id: 3, eq: "C₂H₅OH + 3 O₂ → 2 CO₂ + 3 H₂O", type: "combustion" },
+            { id: 4, eq: "Mg + 2 HCl → MgCl₂ + H₂", type: "single" },
+            { id: 5, eq: "Pb(NO₃)₂ + 2 KI → PbI₂ + 2 KNO₃", type: "double" },
+            { id: 6, eq: "4 Fe + 3 O₂ → 2 Fe₂O₃", type: "synthesis" },
+            { id: 7, eq: "2 H₂O₂ → 2 H₂O + O₂", type: "decomposition" },
+            { id: 8, eq: "2 C₂H₆ + 7 O₂ → 4 CO₂ + 6 H₂O", type: "combustion" },
+            { id: 9, eq: "2 Al + 3 CuCl₂ → 2 AlCl₃ + 3 Cu", type: "single" },
+            { id: 10, eq: "HCl + NaOH → NaCl + H₂O", type: "double" },
+            { id: 11, eq: "2 Na + Cl₂ → 2 NaCl", type: "synthesis" },
+            { id: 12, eq: "2 NaN₃ → 2 Na + 3 N₂", type: "decomposition" }
+        ];
+
+        // --- Game State ---
+        let currentScore = 0;
+        let currentStreak = 0;
+        let questionQueue = [];
+        let currentQuestion = null;
+        let gameActive = false;
+        
+        // Student Info
+        let studentName = "";
+        let classPeriod = "";
+        
+        // --- DOM Elements ---
+        const startScreen = document.getElementById('start-screen');
+        const loginError = document.getElementById('login-error');
+        const headerInfo = document.getElementById('header-student-info');
+        
+        const cardContainer = document.getElementById('card-container');
+        const cardElement = document.getElementById('current-card');
+        const scoreEl = document.getElementById('score');
+        const streakEl = document.getElementById('streak');
+        const equationText = document.getElementById('equation-text');
+        const qNumEl = document.getElementById('q-num');
+        const dropZones = document.querySelectorAll('.flask-zone');
+        const victoryScreen = document.getElementById('victory-screen');
+        const feedbackEl = document.getElementById('feedback');
+
+        // Report Elements
+        const reportName = document.getElementById('report-name');
+        const reportPeriod = document.getElementById('report-period');
+        const reportDate = document.getElementById('report-date');
+        const reportScore = document.getElementById('report-score');
+
+        // --- Drag Variables ---
+        let isDragging = false;
+        let startX, startY;
+        let currentX = 0; 
+        let currentY = 0;
+
+        // --- Login Logic ---
+        function validateAndStart() {
+            const nameInput = document.getElementById('student-name').value.trim();
+            const periodInput = document.getElementById('class-period').value;
+
+            if (nameInput === "" || periodInput === "") {
+                loginError.classList.remove('hidden');
+                return;
+            }
+
+            studentName = nameInput;
+            classPeriod = periodInput;
+            
+            // Update UI
+            headerInfo.innerHTML = `Student: <span class="text-slate-900 font-bold">${studentName}</span> (P${classPeriod})`;
+            loginError.classList.add('hidden');
+            
+            // Animate Start Screen Away
+            startScreen.style.opacity = '0';
+            startScreen.style.transition = 'opacity 0.5s ease';
+            
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+                cardContainer.style.opacity = '1';
+                initGame();
+            }, 500);
+        }
+
+        // --- Initialization ---
+        function initGame() {
+            currentScore = 0;
+            currentStreak = 0;
+            updateStats();
+            // Shuffle and duplicate data for longer play
+            questionQueue = [...reactionData, ...reactionData]
+                .sort(() => Math.random() - 0.5);
+            
+            gameActive = true;
+            victoryScreen.classList.add('hidden');
+            loadNextCard();
+        }
+
+        function updateStats() {
+            scoreEl.innerText = currentScore;
+            streakEl.innerText = currentStreak;
+        }
+
+        function loadNextCard() {
+            if (questionQueue.length === 0) {
+                endGame();
+                return;
+            }
+
+            // Reset position
+            currentX = 0;
+            currentY = 0;
+            cardContainer.style.transform = `translate(0px, 0px)`;
+            cardContainer.classList.add('returning'); // Add transition for reset
+            
+            // Wait for transition to clear before removing class
+            setTimeout(() => {
+                cardContainer.classList.remove('returning');
+            }, 100);
+
+            currentQuestion = questionQueue.pop();
+            equationText.innerHTML = currentQuestion.eq;
+            qNumEl.innerText = reactionData.length * 2 - questionQueue.length;
+        }
+
+        function endGame() {
+            gameActive = false;
+            
+            // Populate Report
+            reportName.innerText = studentName;
+            reportPeriod.innerText = "Period " + classPeriod;
+            
+            const today = new Date();
+            reportDate.innerText = today.toLocaleDateString();
+            reportScore.innerText = currentScore;
+
+            // Calculate Max Score based on perfect play (all correct, perfect streak)
+            const totalQuestions = reactionData.length * 2;
+            // Formula: Sum of (100 + 10*i) for i=0 to totalQuestions-1
+            const maxPossible = (100 * totalQuestions) + (10 * (totalQuestions * (totalQuestions - 1) / 2));
+            document.getElementById('report-max-score').innerText = maxPossible;
+
+            victoryScreen.classList.remove('hidden');
+        }
+
+        function resetGame() {
+            // Reload page to force login again (good for shared devices)
+            location.reload();
+        }
+
+        // --- Interaction Logic ---
+
+        // Helper to get touch/mouse coordinates
+        function getClientCoords(e) {
+            return {
+                x: e.clientX || (e.touches ? e.touches[0].clientX : 0),
+                y: e.clientY || (e.touches ? e.touches[0].clientY : 0)
+            };
+        }
+
+        // Pointer Down
+        cardContainer.addEventListener('pointerdown', (e) => {
+            if (!gameActive) return;
+            
+            isDragging = true;
+            const coords = getClientCoords(e);
+            startX = coords.x - currentX;
+            startY = coords.y - currentY;
+            
+            cardContainer.setPointerCapture(e.pointerId);
+            cardElement.style.cursor = 'grabbing';
+            cardElement.style.transform = "scale(1.02) rotate(2deg)";
+            
+            // Added transparency to see underneath
+            cardElement.style.opacity = "0.8";
+        });
+
+        // Pointer Move
+        cardContainer.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault(); // Prevent scrolling on touch
+
+            const coords = getClientCoords(e);
+            currentX = coords.x - startX;
+            currentY = coords.y - startY;
+
+            cardContainer.style.transform = `translate(${currentX}px, ${currentY}px)`;
+            
+            checkHover();
+        });
+
+        // Pointer Up
+        cardContainer.addEventListener('pointerup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            cardElement.style.cursor = 'grab';
+            cardElement.style.transform = "scale(1) rotate(0deg)";
+            
+            // Reset opacity
+            cardElement.style.opacity = "1";
+            
+            const droppedZone = checkDrop();
+            
+            if (droppedZone) {
+                handleDrop(droppedZone);
+            } else {
+                // Return to center
+                cardContainer.classList.add('returning');
+                currentX = 0;
+                currentY = 0;
+                cardContainer.style.transform = `translate(0px, 0px)`;
+                
+                setTimeout(() => {
+                    cardContainer.classList.remove('returning');
+                }, 500);
+            }
+            
+            // Clear hover effects
+            dropZones.forEach(z => z.classList.remove('hovered'));
+        });
+
+        // Collision Detection
+        function getRect(el) {
+            return el.getBoundingClientRect();
+        }
+
+        function checkHover() {
+            const cardRect = getRect(cardContainer);
+            const cardCenter = {
+                x: cardRect.left + cardRect.width / 2,
+                y: cardRect.top + cardRect.height / 2
+            };
+
+            dropZones.forEach(zone => {
+                const zoneRect = getRect(zone);
+                // Check if card center is within zone bounds
+                if (cardCenter.x >= zoneRect.left && cardCenter.x <= zoneRect.right &&
+                    cardCenter.y >= zoneRect.top && cardCenter.y <= zoneRect.bottom) {
+                    zone.classList.add('hovered');
+                } else {
+                    zone.classList.remove('hovered');
+                }
+            });
+        }
+
+        function checkDrop() {
+            const cardRect = getRect(cardContainer);
+            const cardCenter = {
+                x: cardRect.left + cardRect.width / 2,
+                y: cardRect.top + cardRect.height / 2
+            };
+
+            let foundZone = null;
+            dropZones.forEach(zone => {
+                const zoneRect = getRect(zone);
+                if (cardCenter.x >= zoneRect.left && cardCenter.x <= zoneRect.right &&
+                    cardCenter.y >= zoneRect.top && cardCenter.y <= zoneRect.bottom) {
+                    foundZone = zone;
+                }
+            });
+            return foundZone;
+        }
+
+        function handleDrop(zone) {
+            const selectedType = zone.dataset.type;
+            
+            if (selectedType === currentQuestion.type) {
+                // Correct!
+                handleCorrect(zone);
+            } else {
+                // Incorrect
+                handleIncorrect(zone);
+            }
+        }
+
+        function handleCorrect(zone) {
+            // Logic
+            currentScore += 100 + (currentStreak * 10);
+            currentStreak++;
+            updateStats();
+            
+            // Visuals
+            createBubbles(zone);
+            showFeedback("Correct!", "text-green-500");
+            zone.querySelector('svg').classList.add('correct-pulse');
+            setTimeout(() => zone.querySelector('svg').classList.remove('correct-pulse'), 500);
+
+            // Move to next
+            cardContainer.style.opacity = '0';
+            setTimeout(() => {
+                loadNextCard();
+                cardContainer.style.opacity = '1';
+            }, 300);
+        }
+
+        function handleIncorrect(zone) {
+            // Logic
+            currentStreak = 0;
+            currentScore = Math.max(0, currentScore - 50);
+            updateStats();
+
+            // Visuals
+            zone.classList.add('shake');
+            showFeedback("Try Again!", "text-red-500");
+            setTimeout(() => zone.classList.remove('shake'), 500);
+            
+            // Return card
+            cardContainer.classList.add('returning');
+            currentX = 0;
+            currentY = 0;
+            cardContainer.style.transform = `translate(0px, 0px)`;
+            setTimeout(() => cardContainer.classList.remove('returning'), 500);
+        }
+
+        function showFeedback(text, colorClass) {
+            feedbackEl.innerText = text;
+            feedbackEl.className = `absolute top-20 pointer-events-none text-4xl md:text-6xl font-bold transition-all duration-300 drop-shadow-sm ${colorClass} z-30`;
+            feedbackEl.style.opacity = '1';
+            feedbackEl.style.transform = 'translateY(0px)';
+            
+            setTimeout(() => {
+                feedbackEl.style.opacity = '0';
+                feedbackEl.style.transform = 'translateY(-20px)';
+            }, 1000);
+        }
+
+        function createBubbles(zone) {
+            const rect = zone.getBoundingClientRect();
+            for(let i=0; i<8; i++) { // Increased bubble count
+                const bubble = document.createElement('div');
+                bubble.classList.add('bubble');
+                
+                // Random size
+                const size = Math.random() * 15 + 5; 
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                
+                // Position relative to zone
+                bubble.style.left = `${rect.left + rect.width/2 + (Math.random()*60 - 30)}px`;
+                bubble.style.top = `${rect.top + 20}px`;
+                
+                document.body.appendChild(bubble);
+                
+                setTimeout(() => bubble.remove(), 1200);
+            }
+        }
+    </script>
+</body>
+</html>
