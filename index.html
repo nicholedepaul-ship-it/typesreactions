@@ -123,6 +123,17 @@
             background-color: #fef2f2 !important;
         }
         
+        /* New Hint Animation */
+        @keyframes pulse-hint {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); transform: scale(1); border-color: #3b82f6; background-color: #eff6ff; }
+            50% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); transform: scale(1.05); border-color: #2563eb; background-color: #dbeafe; }
+        }
+
+        .hint-active {
+            animation: pulse-hint 2s infinite;
+            z-index: 40;
+        }
+        
         .correct-pulse {
             animation: pulse-green 0.5s ease-in-out;
         }
@@ -253,8 +264,11 @@
                 <div id="current-card" class="reaction-card w-full h-full rounded-2xl flex flex-col items-center justify-center p-4 md:p-8 border border-slate-200 text-center relative overflow-hidden bg-white transition-opacity duration-200">
                     <div class="absolute top-2 right-4 text-[10px] text-slate-400 font-bold tracking-[0.2em] uppercase">Reaction #<span id="q-num" class="text-blue-600">1</span></div>
                     
+                    <!-- Answer Reveal Area -->
+                    <div id="answer-reveal" class="w-full text-center text-red-500 font-bold text-lg md:text-xl opacity-0 transition-opacity duration-300 h-6 mb-1 mt-4"></div>
+
                     <!-- Main Equation Text Area -->
-                    <div class="w-full flex items-center justify-center flex-grow pb-6 px-2 overflow-hidden">
+                    <div class="w-full flex items-center justify-center flex-grow pb-4 px-2 overflow-hidden">
                         <div class="text-base sm:text-lg md:text-2xl lg:text-3xl font-bold equation-font text-slate-800 whitespace-nowrap" id="equation-text">
                             <!-- Equation inserted here -->
                         </div>
@@ -462,6 +476,9 @@
         const reportPeriod = document.getElementById('report-period');
         const reportDate = document.getElementById('report-date');
         const reportScore = document.getElementById('report-score');
+        
+        // Answer Reveal Element
+        const answerRevealEl = document.getElementById('answer-reveal');
 
         // --- Drag Variables ---
         let isDragging = false;
@@ -509,7 +526,6 @@
             };
 
             // Attempt to create a queue without adjacent duplicates
-            // We try multiple times to find a valid permutation where no two neighbors have the same type
             for (let attempt = 0; attempt < 100; attempt++) {
                 const queue = shuffle([...data]);
                 let hasAdjacentDuplicate = false;
@@ -526,7 +542,6 @@
                 }
             }
             
-            // Fallback to simple shuffle if perfect separation isn't found quickly
             return shuffle([...data]);
         }
 
@@ -553,6 +568,13 @@
                 endGame();
                 return;
             }
+
+            // Remove any hint classes from zones
+            dropZones.forEach(z => z.classList.remove('hint-active'));
+            
+            // Hide and clear Answer Reveal
+            answerRevealEl.style.opacity = '0';
+            answerRevealEl.innerText = '';
 
             // Reset position and attempts
             currentX = 0;
@@ -696,22 +718,38 @@
             }
         }
 
+        function formatType(type) {
+            switch(type) {
+                case 'synthesis': return 'Synthesis';
+                case 'decomposition': return 'Decomposition';
+                case 'single': return 'Single Displacement';
+                case 'double': return 'Double Displacement';
+                case 'combustion': return 'Combustion';
+                default: return type;
+            }
+        }
+
         function handleCorrect(zone) {
             // Scoring Logic
             let pointsEarned = 0;
             if (currentAttempts === 0) {
                 pointsEarned = 10; // First try
+            } else if (currentAttempts === 1) {
+                pointsEarned = 5;  // Second try
             } else {
-                pointsEarned = 5;  // Second try (or later)
+                pointsEarned = 0;  // Third try or later (revealed)
             }
             
             currentScore += pointsEarned;
-            currentStreak++;
+            if (pointsEarned > 0) currentStreak++;
             updateStats();
             
             // Visuals
             createBubbles(zone);
-            showFeedback(`+${pointsEarned} Points!`, "text-green-500");
+            const msg = pointsEarned > 0 ? `+${pointsEarned} Points!` : "Correct!";
+            const color = pointsEarned > 0 ? "text-green-500" : "text-blue-500";
+            showFeedback(msg, color);
+            
             zone.querySelector('svg').classList.add('correct-pulse');
             setTimeout(() => zone.querySelector('svg').classList.remove('correct-pulse'), 500);
 
@@ -724,15 +762,31 @@
         }
 
         function handleIncorrect(zone) {
-            // Logic
             currentStreak = 0;
-            currentAttempts++; // Mark that an attempt has been made
+            currentAttempts++; 
             updateStats();
 
-            // Visuals
-            zone.classList.add('shake');
-            showFeedback("Try Again!", "text-red-500");
-            setTimeout(() => zone.classList.remove('shake'), 500);
+            // Check if user has failed twice (so this is the result of attempt #2 failing)
+            if (currentAttempts >= 2) {
+                // REVEAL ANSWER
+                const correctType = currentQuestion.type;
+                const correctZone = document.querySelector(`.flask-zone[data-type="${correctType}"]`);
+                
+                // Highlight the correct zone
+                if (correctZone) {
+                    correctZone.classList.add('hint-active');
+                }
+                
+                // Show Answer on Card
+                answerRevealEl.innerText = `Correct Type: ${formatType(correctType)}`;
+                answerRevealEl.style.opacity = '1';
+
+            } else {
+                // Standard Incorrect Feedback
+                zone.classList.add('shake');
+                showFeedback("Try Again!", "text-red-500");
+                setTimeout(() => zone.classList.remove('shake'), 500);
+            }
             
             // Return card
             cardContainer.classList.add('returning');
@@ -744,14 +798,16 @@
 
         function showFeedback(text, colorClass) {
             feedbackEl.innerText = text;
-            feedbackEl.className = `absolute top-20 pointer-events-none text-4xl md:text-6xl font-bold transition-all duration-300 drop-shadow-sm ${colorClass} z-30`;
+            // Allow dynamic text size if passed in class, otherwise default to large
+            const sizeClass = colorClass.includes('text-') && colorClass.includes('xl') ? '' : 'text-4xl md:text-6xl';
+            feedbackEl.className = `absolute top-20 pointer-events-none font-bold transition-all duration-300 drop-shadow-sm ${sizeClass} ${colorClass} z-30`;
             feedbackEl.style.opacity = '1';
             feedbackEl.style.transform = 'translateY(0px)';
             
             setTimeout(() => {
                 feedbackEl.style.opacity = '0';
                 feedbackEl.style.transform = 'translateY(-20px)';
-            }, 1000);
+            }, 1500); // Slightly longer display for hints
         }
 
         function createBubbles(zone) {
