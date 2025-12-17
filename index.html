@@ -51,15 +51,45 @@
 
         /* Flask/Zone Styles */
         .flask-zone {
-            transition: all 0.2s ease;
-            border: 2px solid transparent;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 3px solid transparent; /* Reserve space for border */
         }
 
+        /* Active Hover State (Added by JS) */
         .flask-zone.hovered {
-            transform: scale(1.05) translateY(-5px);
-            background-color: #f1f5f9;
-            border-color: #cbd5e1;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: scale(1.1) translateY(-10px);
+            z-index: 50; /* Bring to front */
+        }
+        
+        /* Specific High-Contrast Highlights */
+        .flask-zone[data-type="synthesis"].hovered {
+            background-color: #eff6ff; /* blue-50 */
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.6);
+        }
+        
+        .flask-zone[data-type="decomposition"].hovered {
+            background-color: #f0fdf4; /* green-50 */
+            border-color: #22c55e; /* green-500 */
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.6);
+        }
+        
+        .flask-zone[data-type="single"].hovered {
+            background-color: #fefce8; /* yellow-50 */
+            border-color: #eab308; /* yellow-500 */
+            box-shadow: 0 0 25px rgba(234, 179, 8, 0.6);
+        }
+        
+        .flask-zone[data-type="double"].hovered {
+            background-color: #faf5ff; /* purple-50 */
+            border-color: #a855f7; /* purple-500 */
+            box-shadow: 0 0 25px rgba(168, 85, 247, 0.6);
+        }
+        
+        .flask-zone[data-type="combustion"].hovered {
+            background-color: #fef2f2; /* red-50 */
+            border-color: #ef4444; /* red-500 */
+            box-shadow: 0 0 25px rgba(239, 68, 68, 0.6);
         }
         
         .flask-zone.hovered path {
@@ -394,7 +424,10 @@
             { id: 9, eq: "2 Al + 3 CuCl₂ → 2 AlCl₃ + 3 Cu", type: "single" },
             { id: 10, eq: "HCl + NaOH → NaCl + H₂O", type: "double" },
             { id: 11, eq: "2 Na + Cl₂ → 2 NaCl", type: "synthesis" },
-            { id: 12, eq: "2 NaN₃ → 2 Na + 3 N₂", type: "decomposition" }
+            { id: 12, eq: "2 NaN₃ → 2 Na + 3 N₂", type: "decomposition" },
+            { id: 13, eq: "2 C₈H₁₈ + 25 O₂ → 16 CO₂ + 18 H₂O", type: "combustion" },
+            { id: 14, eq: "3 CaCl₂ + 2 Na₃PO₄ → Ca₃(PO₄)₂ + 6 NaCl", type: "double" },
+            { id: 15, eq: "3 Ag₂S + 2 Al → 6 Ag + Al₂S₃", type: "single" }
         ];
 
         // --- Game State ---
@@ -403,6 +436,7 @@
         let questionQueue = [];
         let currentQuestion = null;
         let gameActive = false;
+        let currentAttempts = 0; // Track attempts for the current card
         
         // Student Info
         let studentName = "";
@@ -464,13 +498,45 @@
         }
 
         // --- Initialization ---
+        function getShuffledQueue(data) {
+            // Helper function to shuffle array (Fisher-Yates)
+            const shuffle = (array) => {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            };
+
+            // Attempt to create a queue without adjacent duplicates
+            // We try multiple times to find a valid permutation where no two neighbors have the same type
+            for (let attempt = 0; attempt < 100; attempt++) {
+                const queue = shuffle([...data]);
+                let hasAdjacentDuplicate = false;
+                
+                for (let i = 0; i < queue.length - 1; i++) {
+                    if (queue[i].type === queue[i+1].type) {
+                        hasAdjacentDuplicate = true;
+                        break;
+                    }
+                }
+                
+                if (!hasAdjacentDuplicate) {
+                    return queue;
+                }
+            }
+            
+            // Fallback to simple shuffle if perfect separation isn't found quickly
+            return shuffle([...data]);
+        }
+
         function initGame() {
             currentScore = 0;
             currentStreak = 0;
             updateStats();
-            // Shuffle and duplicate data for longer play
-            questionQueue = [...reactionData, ...reactionData]
-                .sort(() => Math.random() - 0.5);
+            
+            // Create queue without duplication and prevent back-to-back types
+            questionQueue = getShuffledQueue(reactionData);
             
             gameActive = true;
             victoryScreen.classList.add('hidden');
@@ -488,20 +554,22 @@
                 return;
             }
 
-            // Reset position
+            // Reset position and attempts
             currentX = 0;
             currentY = 0;
+            currentAttempts = 0; // Reset attempts for new card
             cardContainer.style.transform = `translate(0px, 0px)`;
-            cardContainer.classList.add('returning'); // Add transition for reset
+            cardContainer.classList.add('returning'); 
             
-            // Wait for transition to clear before removing class
             setTimeout(() => {
                 cardContainer.classList.remove('returning');
             }, 100);
 
             currentQuestion = questionQueue.pop();
             equationText.innerHTML = currentQuestion.eq;
-            qNumEl.innerText = reactionData.length * 2 - questionQueue.length;
+            
+            // Display current number out of total
+            qNumEl.innerText = `${reactionData.length - questionQueue.length} / ${reactionData.length}`;
         }
 
         function endGame() {
@@ -515,23 +583,18 @@
             reportDate.innerText = today.toLocaleDateString();
             reportScore.innerText = currentScore;
 
-            // Calculate Max Score based on perfect play (all correct, perfect streak)
-            const totalQuestions = reactionData.length * 2;
-            // Formula: Sum of (100 + 10*i) for i=0 to totalQuestions-1
-            const maxPossible = (100 * totalQuestions) + (10 * (totalQuestions * (totalQuestions - 1) / 2));
+            // Calculate Max Score (10 points per question)
+            const maxPossible = reactionData.length * 10;
             document.getElementById('report-max-score').innerText = maxPossible;
 
             victoryScreen.classList.remove('hidden');
         }
 
         function resetGame() {
-            // Reload page to force login again (good for shared devices)
             location.reload();
         }
 
         // --- Interaction Logic ---
-
-        // Helper to get touch/mouse coordinates
         function getClientCoords(e) {
             return {
                 x: e.clientX || (e.touches ? e.touches[0].clientX : 0),
@@ -539,45 +602,33 @@
             };
         }
 
-        // Pointer Down
         cardContainer.addEventListener('pointerdown', (e) => {
             if (!gameActive) return;
-            
             isDragging = true;
             const coords = getClientCoords(e);
             startX = coords.x - currentX;
             startY = coords.y - currentY;
-            
             cardContainer.setPointerCapture(e.pointerId);
             cardElement.style.cursor = 'grabbing';
             cardElement.style.transform = "scale(1.02) rotate(2deg)";
-            
-            // Added transparency to see underneath
             cardElement.style.opacity = "0.8";
         });
 
-        // Pointer Move
         cardContainer.addEventListener('pointermove', (e) => {
             if (!isDragging) return;
-            e.preventDefault(); // Prevent scrolling on touch
-
+            e.preventDefault(); 
             const coords = getClientCoords(e);
             currentX = coords.x - startX;
             currentY = coords.y - startY;
-
             cardContainer.style.transform = `translate(${currentX}px, ${currentY}px)`;
-            
             checkHover();
         });
 
-        // Pointer Up
         cardContainer.addEventListener('pointerup', (e) => {
             if (!isDragging) return;
             isDragging = false;
             cardElement.style.cursor = 'grab';
             cardElement.style.transform = "scale(1) rotate(0deg)";
-            
-            // Reset opacity
             cardElement.style.opacity = "1";
             
             const droppedZone = checkDrop();
@@ -585,18 +636,12 @@
             if (droppedZone) {
                 handleDrop(droppedZone);
             } else {
-                // Return to center
                 cardContainer.classList.add('returning');
                 currentX = 0;
                 currentY = 0;
                 cardContainer.style.transform = `translate(0px, 0px)`;
-                
-                setTimeout(() => {
-                    cardContainer.classList.remove('returning');
-                }, 500);
+                setTimeout(() => cardContainer.classList.remove('returning'), 500);
             }
-            
-            // Clear hover effects
             dropZones.forEach(z => z.classList.remove('hovered'));
         });
 
@@ -614,7 +659,6 @@
 
             dropZones.forEach(zone => {
                 const zoneRect = getRect(zone);
-                // Check if card center is within zone bounds
                 if (cardCenter.x >= zoneRect.left && cardCenter.x <= zoneRect.right &&
                     cardCenter.y >= zoneRect.top && cardCenter.y <= zoneRect.bottom) {
                     zone.classList.add('hovered');
@@ -646,23 +690,28 @@
             const selectedType = zone.dataset.type;
             
             if (selectedType === currentQuestion.type) {
-                // Correct!
                 handleCorrect(zone);
             } else {
-                // Incorrect
                 handleIncorrect(zone);
             }
         }
 
         function handleCorrect(zone) {
-            // Logic
-            currentScore += 100 + (currentStreak * 10);
+            // Scoring Logic
+            let pointsEarned = 0;
+            if (currentAttempts === 0) {
+                pointsEarned = 10; // First try
+            } else {
+                pointsEarned = 5;  // Second try (or later)
+            }
+            
+            currentScore += pointsEarned;
             currentStreak++;
             updateStats();
             
             // Visuals
             createBubbles(zone);
-            showFeedback("Correct!", "text-green-500");
+            showFeedback(`+${pointsEarned} Points!`, "text-green-500");
             zone.querySelector('svg').classList.add('correct-pulse');
             setTimeout(() => zone.querySelector('svg').classList.remove('correct-pulse'), 500);
 
@@ -677,7 +726,7 @@
         function handleIncorrect(zone) {
             // Logic
             currentStreak = 0;
-            currentScore = Math.max(0, currentScore - 50);
+            currentAttempts++; // Mark that an attempt has been made
             updateStats();
 
             // Visuals
@@ -707,21 +756,15 @@
 
         function createBubbles(zone) {
             const rect = zone.getBoundingClientRect();
-            for(let i=0; i<8; i++) { // Increased bubble count
+            for(let i=0; i<8; i++) {
                 const bubble = document.createElement('div');
                 bubble.classList.add('bubble');
-                
-                // Random size
                 const size = Math.random() * 15 + 5; 
                 bubble.style.width = `${size}px`;
                 bubble.style.height = `${size}px`;
-                
-                // Position relative to zone
                 bubble.style.left = `${rect.left + rect.width/2 + (Math.random()*60 - 30)}px`;
                 bubble.style.top = `${rect.top + 20}px`;
-                
                 document.body.appendChild(bubble);
-                
                 setTimeout(() => bubble.remove(), 1200);
             }
         }
