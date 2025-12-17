@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reaction Lab - Student Activity</title>
+    <title>Types of Chemical Reactions - Student Activity</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -56,9 +56,10 @@
         }
 
         .flask-zone.hovered {
-            transform: scale(1.02) translateX(-5px);
+            transform: scale(1.05) translateY(-5px);
             background-color: #f1f5f9;
             border-color: #cbd5e1;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
         
         .flask-zone.hovered path {
@@ -142,7 +143,7 @@
 
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col p-4 relative overflow-hidden">
+<body class="h-screen w-screen flex flex-col p-2 md:p-4 relative overflow-hidden bg-slate-50">
 
     <!-- Background Elements (Light Mode) -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-5">
@@ -156,7 +157,7 @@
         <div class="glass-panel p-8 rounded-2xl max-w-md w-full shadow-2xl mx-4 border border-slate-200">
             <div class="text-center mb-8">
                 <i class="fas fa-flask text-6xl text-blue-600 mb-6 animate-bounce"></i>
-                <h1 class="text-4xl font-bold text-slate-800 mb-2 tracking-wide">Reaction Lab</h1>
+                <h1 class="text-3xl md:text-4xl font-bold text-slate-800 mb-2 tracking-wide">Types of Chemical Reactions</h1>
                 <p class="text-slate-500 text-sm uppercase tracking-widest">Identification Protocol</p>
             </div>
             
@@ -189,30 +190,30 @@
     </div>
 
     <!-- Header / Stats -->
-    <div class="z-10 w-full flex-none flex justify-between items-center glass-panel rounded-xl px-6 py-3 mb-4 shadow-sm bg-white">
+    <div class="z-10 w-full flex-none flex justify-between items-center glass-panel rounded-xl px-4 py-2 mb-2 shadow-sm bg-white">
         <div>
-            <h1 class="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">
-                <i class="fas fa-microscope text-blue-600 mr-2"></i>Reaction Lab
+            <h1 class="text-lg md:text-xl font-bold text-slate-800 tracking-tight">
+                <i class="fas fa-microscope text-blue-600 mr-2"></i>Types of Chemical Reactions
             </h1>
-            <p class="text-xs text-slate-500 font-mono mt-1" id="header-student-info">Student: <span class="text-slate-900 font-bold">Waiting...</span></p>
+            <p class="text-xs text-slate-500 font-mono mt-0.5" id="header-student-info">Student: <span class="text-slate-900 font-bold">Waiting...</span></p>
         </div>
-        <div class="flex gap-8 text-center">
-            <div class="bg-slate-50 px-4 py-1 rounded-lg border border-slate-200">
+        <div class="flex gap-4 text-center">
+            <div class="bg-slate-50 px-3 py-1 rounded-lg border border-slate-200">
                 <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Score</div>
-                <div class="text-2xl font-bold text-blue-600 font-mono" id="score">0</div>
+                <div class="text-xl font-bold text-blue-600 font-mono" id="score">0</div>
             </div>
-            <div class="bg-slate-50 px-4 py-1 rounded-lg border border-slate-200">
+            <div class="bg-slate-50 px-3 py-1 rounded-lg border border-slate-200">
                 <div class="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Streak</div>
-                <div class="text-2xl font-bold text-orange-500 font-mono" id="streak">0</div>
+                <div class="text-xl font-bold text-orange-500 font-mono" id="streak">0</div>
             </div>
         </div>
     </div>
 
-    <!-- Main Content Area: Split View -->
-    <div class="flex flex-col md:flex-row flex-grow w-full relative gap-6 overflow-hidden" id="game-area">
+    <!-- Main Game Area -->
+    <div class="flex flex-col flex-grow w-full relative overflow-hidden h-full" id="game-area">
 
-        <!-- LEFT SIDE: Equation Card Area -->
-        <div class="w-full md:w-2/3 h-full relative flex items-center justify-center bg-slate-100/50 rounded-2xl border-2 border-dashed border-slate-200 p-4">
+        <!-- TOP: Equation Card Area -->
+        <div class="w-full flex-grow relative flex items-center justify-center bg-slate-100/50 rounded-2xl border-2 border-dashed border-slate-200 p-4 mb-2">
              
              <!-- Feedback Message -->
             <div id="feedback" class="absolute top-10 pointer-events-none text-4xl md:text-5xl font-bold opacity-0 transition-opacity duration-300 drop-shadow-sm z-30"></div>
@@ -220,10 +221,10 @@
             <!-- The Draggable Card -->
             <div id="card-container" class="absolute z-20 w-[90%] max-w-lg h-32 md:h-44 cursor-grab opacity-0 transition-opacity duration-500 shadow-xl">
                 <div id="current-card" class="reaction-card w-full h-full rounded-2xl flex flex-col items-center justify-center p-4 md:p-6 border border-slate-200 text-center relative overflow-hidden bg-white transition-opacity duration-200">
-                    <div class="absolute top-2 right-4 text-[10px] text-slate-400 font-bold tracking-[0.2em] uppercase">Equation #<span id="q-num" class="text-blue-600">1</span></div>
+                    <div class="absolute top-2 right-4 text-[10px] text-slate-400 font-bold tracking-[0.2em] uppercase">Reaction #<span id="q-num" class="text-blue-600">1</span></div>
                     
                     <!-- Main Equation Text Area -->
-                    <div class="w-full flex items-center justify-center flex-grow">
+                    <div class="w-full flex items-center justify-center flex-grow pb-4">
                         <div class="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold equation-font text-slate-800 whitespace-nowrap px-2" id="equation-text">
                             <!-- Equation inserted here -->
                         </div>
@@ -233,92 +234,87 @@
                         <div id="timer-bar" class="h-full bg-gradient-to-r from-blue-500 to-cyan-400 w-full transition-all duration-1000 ease-linear"></div>
                     </div>
                     
-                    <div class="absolute bottom-1 left-0 w-full text-center">
-                        <p class="text-[8px] md:text-[10px] text-slate-400 uppercase tracking-widest">Drag to the correct reaction type &rarr;</p>
+                    <div class="absolute bottom-4 left-0 w-full text-center">
+                        <p class="text-[10px] md:text-xs text-slate-500 uppercase tracking-widest font-bold">Drag down to target &darr;</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- RIGHT SIDE: Drop Zones Vertical List -->
-        <div class="w-full md:w-1/3 h-full flex flex-col justify-center gap-2 overflow-y-auto pr-2" id="drop-zones">
+        <!-- BOTTOM: Drop Zones Horizontal List -->
+        <div class="w-full h-auto min-h-[140px] flex flex-row items-stretch justify-center gap-2 p-2 bg-white rounded-xl shadow-sm border border-slate-200 z-10" id="drop-zones">
             
             <!-- Synthesis -->
-            <div class="flask-zone flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200 cursor-pointer group hover:shadow-md" data-type="synthesis">
-                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
-                    <svg viewBox="0 0 24 24" class="w-6 h-6 text-blue-500 fill-current">
+            <div class="flask-zone flex flex-col items-center justify-center gap-1 bg-slate-50 p-2 rounded-lg flex-1 cursor-pointer group hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200" data-type="synthesis">
+                <div class="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center bg-white rounded-full shadow-sm group-hover:scale-110 transition-transform">
+                    <svg viewBox="0 0 24 24" class="w-6 h-6 md:w-7 md:h-7 text-blue-500 fill-current">
                         <path d="M6,22a3,3,0,0,0,3-3V7a1,1,0,0,0-2,0V19a1,1,0,0,1-2,0V7A3,3,0,0,1,8,4h8a3,3,0,0,1,3,3V19a1,1,0,0,1-2,0V7a1,1,0,0,0-2,0V19a3,3,0,0,0,3,3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M8 22h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                         <rect x="7" y="14" width="10" height="6" rx="1" class="fill-blue-500 opacity-60" />
                     </svg>
                 </div>
-                <div class="flex-grow">
-                    <div class="text-sm font-bold text-slate-700 uppercase tracking-wider group-hover:text-blue-700">Synthesis</div>
-                    <div class="text-[10px] text-slate-400 font-mono">A + B &rarr; AB</div>
+                <div class="text-center">
+                    <div class="text-[10px] md:text-xs font-bold text-slate-700 uppercase tracking-tight group-hover:text-blue-700 leading-tight">Synthesis</div>
+                    <div class="text-[8px] text-slate-400 font-mono hidden md:block mt-1">A + B &rarr; AB</div>
                 </div>
-                <div class="text-slate-300 group-hover:text-blue-500"><i class="fas fa-chevron-left"></i></div>
             </div>
 
             <!-- Decomposition -->
-            <div class="flask-zone flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200 cursor-pointer group hover:shadow-md" data-type="decomposition">
-                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors">
-                    <svg viewBox="0 0 24 24" class="w-6 h-6 text-green-500 fill-current">
+            <div class="flask-zone flex flex-col items-center justify-center gap-1 bg-slate-50 p-2 rounded-lg flex-1 cursor-pointer group hover:bg-green-50 transition-colors border border-transparent hover:border-green-200" data-type="decomposition">
+                <div class="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center bg-white rounded-full shadow-sm group-hover:scale-110 transition-transform">
+                    <svg viewBox="0 0 24 24" class="w-6 h-6 md:w-7 md:h-7 text-green-500 fill-current">
                          <path d="M10,2v7.31L6,14v6a2,2,0,0,0,2,2h8a2,2,0,0,0,2-2V14l-4-4.69V2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
                          <path d="M10 16h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                          <path d="M7 16h10v4H7z" class="fill-green-500 opacity-60" />
                     </svg>
                 </div>
-                <div class="flex-grow">
-                    <div class="text-sm font-bold text-slate-700 uppercase tracking-wider group-hover:text-green-700">Decomposition</div>
-                    <div class="text-[10px] text-slate-400 font-mono">AB &rarr; A + B</div>
+                <div class="text-center">
+                    <div class="text-[10px] md:text-xs font-bold text-slate-700 uppercase tracking-tight group-hover:text-green-700 leading-tight">Decomp</div>
+                    <div class="text-[8px] text-slate-400 font-mono hidden md:block mt-1">AB &rarr; A + B</div>
                 </div>
-                <div class="text-slate-300 group-hover:text-green-500"><i class="fas fa-chevron-left"></i></div>
             </div>
 
             <!-- Single Displacement -->
-            <div class="flask-zone flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200 cursor-pointer group hover:shadow-md" data-type="single">
-                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-yellow-50 rounded-lg group-hover:bg-yellow-100 transition-colors">
-                    <svg viewBox="0 0 24 24" class="w-6 h-6 text-yellow-500 fill-current">
+            <div class="flask-zone flex flex-col items-center justify-center gap-1 bg-slate-50 p-2 rounded-lg flex-1 cursor-pointer group hover:bg-yellow-50 transition-colors border border-transparent hover:border-yellow-200" data-type="single">
+                <div class="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center bg-white rounded-full shadow-sm group-hover:scale-110 transition-transform">
+                    <svg viewBox="0 0 24 24" class="w-6 h-6 md:w-7 md:h-7 text-yellow-500 fill-current">
                         <path d="M8,21h8a2,2,0,0,0,2-2V12L12,3,6,12v7A2,2,0,0,0,8,21Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
                         <path d="M8 15h8v4H8z" class="fill-yellow-500 opacity-60" />
                     </svg>
                 </div>
-                <div class="flex-grow">
-                    <div class="text-sm font-bold text-slate-700 uppercase tracking-wider group-hover:text-yellow-700">Single Displacement</div>
-                    <div class="text-[10px] text-slate-400 font-mono">A + BC &rarr; AC + B</div>
+                <div class="text-center">
+                    <div class="text-[10px] md:text-xs font-bold text-slate-700 uppercase tracking-tight group-hover:text-yellow-700 leading-tight">Single<br>Displacement</div>
+                    <div class="text-[8px] text-slate-400 font-mono hidden md:block mt-1">A + BC &rarr; AC + B</div>
                 </div>
-                <div class="text-slate-300 group-hover:text-yellow-500"><i class="fas fa-chevron-left"></i></div>
             </div>
 
             <!-- Double Displacement -->
-            <div class="flask-zone flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200 cursor-pointer group hover:shadow-md" data-type="double">
-                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
-                    <svg viewBox="0 0 24 24" class="w-6 h-6 text-purple-500 fill-current">
+            <div class="flask-zone flex flex-col items-center justify-center gap-1 bg-slate-50 p-2 rounded-lg flex-1 cursor-pointer group hover:bg-purple-50 transition-colors border border-transparent hover:border-purple-200" data-type="double">
+                <div class="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center bg-white rounded-full shadow-sm group-hover:scale-110 transition-transform">
+                    <svg viewBox="0 0 24 24" class="w-6 h-6 md:w-7 md:h-7 text-purple-500 fill-current">
                         <path d="M5,21a2,2,0,0,0,2-2V10l3-6h4l3,6V19a2,2,0,0,0,2,2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <rect x="7" y="14" width="10" height="5" class="fill-purple-500 opacity-60" />
                     </svg>
                 </div>
-                <div class="flex-grow">
-                    <div class="text-sm font-bold text-slate-700 uppercase tracking-wider group-hover:text-purple-700">Double Displacement</div>
-                    <div class="text-[10px] text-slate-400 font-mono">AB + CD &rarr; AD + CB</div>
+                <div class="text-center">
+                    <div class="text-[10px] md:text-xs font-bold text-slate-700 uppercase tracking-tight group-hover:text-purple-700 leading-tight">Double<br>Displacement</div>
+                    <div class="text-[8px] text-slate-400 font-mono hidden md:block mt-1">AB + CD &rarr; AD + CB</div>
                 </div>
-                <div class="text-slate-300 group-hover:text-purple-500"><i class="fas fa-chevron-left"></i></div>
             </div>
 
             <!-- Combustion -->
-            <div class="flask-zone flex items-center gap-3 bg-white p-2 rounded-xl shadow-sm border border-slate-200 cursor-pointer group hover:shadow-md" data-type="combustion">
-                <div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-red-50 rounded-lg group-hover:bg-red-100 transition-colors">
-                    <svg viewBox="0 0 24 24" class="w-6 h-6 text-red-500 fill-current">
+            <div class="flask-zone flex flex-col items-center justify-center gap-1 bg-slate-50 p-2 rounded-lg flex-1 cursor-pointer group hover:bg-red-50 transition-colors border border-transparent hover:border-red-200" data-type="combustion">
+                <div class="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 flex items-center justify-center bg-white rounded-full shadow-sm group-hover:scale-110 transition-transform">
+                    <svg viewBox="0 0 24 24" class="w-6 h-6 md:w-7 md:h-7 text-red-500 fill-current">
                         <path d="M12,2a7,7,0,0,1,7,7c0,5-7,13-7,13S5,14,5,9A7,7,0,0,1,12,2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
                         <path d="M9 11c0 3 3 7 3 7s3-4 3-7" class="fill-red-500 opacity-60" />
                         <path d="M12 5v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                     </svg>
                 </div>
-                <div class="flex-grow">
-                    <div class="text-sm font-bold text-slate-700 uppercase tracking-wider group-hover:text-red-700">Combustion</div>
-                    <div class="text-[10px] text-slate-400 font-mono">CxHy + O₂ &rarr; CO₂ + H₂O</div>
+                <div class="text-center">
+                    <div class="text-[10px] md:text-xs font-bold text-slate-700 uppercase tracking-tight group-hover:text-red-700 leading-tight">Combustion</div>
+                    <div class="text-[8px] text-slate-400 font-mono hidden md:block mt-1">CxHy + O₂ &rarr; ...</div>
                 </div>
-                <div class="text-slate-300 group-hover:text-red-500"><i class="fas fa-chevron-left"></i></div>
             </div>
 
         </div>
